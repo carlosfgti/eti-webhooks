@@ -11,7 +11,7 @@ class Enrollment extends Model
 
     protected $primaryKey = 'id_matricula';
 
-    protected $fillable = ['id_user', 'id_especializacao', 'liberado', 'status', 'payment_type', 'purchase_date'];
+    protected $fillable = ['id_user', 'id_especializacao', 'liberado', 'status', 'payment_type', 'purchase_date', 'id_plano'];
 
     protected $dates = ['purchase_date'];
 
