@@ -8,17 +8,15 @@ use App\Models\Enrollment;
 use App\Models\User;
 use App\Notifications\NewEnrollment;
 use App\Notifications\NewUserCreated;
+use App\Notifications\UserChargeback;
+use App\Notifications\UserDisputeEnrollment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class HotmartController extends Controller
 {
-    public function releaseStudentRegistration(Request $request)
+    public function newSale(Request $request)
     {
-        // TMP Validation
-        if ($request->hottok != env('HOTMART_TOKEN')) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
         // If request is subscription, ignore
         if ($request->has('name_subscription_plan')) {
             return response()->json(['message' => 'not_processed_eti']);
@@ -26,6 +24,7 @@ class HotmartController extends Controller
 
         // Get Course
         if (!$course = Course::where('identificador_hotmart', $request->prod)->with('bonus')->first()) {
+            Log::info('Course Not Found', $request->toArray());
             return response()->json(['error' => 'Course Not Found'], 404);
         }
 
@@ -34,6 +33,10 @@ class HotmartController extends Controller
 
         // Check Exists User
         if (!$user = User::where('email', $request->email)->first()) {
+            if ($request->status != 'approved') {
+                return response()->json(['message' => "User Not Exists And Status: {$request->status}"]);
+            }
+
             $password = generatePassword();
             // Create new student
             $user = User::create([
@@ -45,6 +48,11 @@ class HotmartController extends Controller
             ]);
 
             $user->notify(new NewUserCreated($password, $user, $course));
+        }
+
+        if ($request->status != 'approved') {
+            // Cancel enrollments and delete user
+            return $this->cancelEnrollments($request->status, $user, $course);
         }
 
         if ($this->userEnrollmentInCourse($user, $course)) {
@@ -88,5 +96,35 @@ class HotmartController extends Controller
                                     ->first();
 
         return $enrollment;
+    }
+
+    public function cancelEnrollments(String $status, User $user, Course $course)
+    {
+        // Delete all enrollments
+        Enrollment::where('id_especializacao', $course->id)
+                    ->where('id_user', $user->id)
+                    ->delete();
+
+        // Delete all bonus
+        foreach ($course->bonus as $courseBonus) {
+            Enrollment::where('id_especializacao', $courseBonus->id)
+                    ->where('id_user', $user->id)
+                    ->delete();
+        }
+
+        if ($status == 'chargeback') {
+            $user->notify(new UserChargeback($course));
+            $user->delete();
+        }
+
+        if ($status == 'chargeback') {
+            $user->notify(new UserChargeback($course));
+        } else if ($status == 'dispute') {
+            $user->notify(new UserDisputeEnrollment($course));
+        }
+
+        $user->delete();
+
+        return response()->json(['message' => 'Success - User Removed']);
     }
 }
