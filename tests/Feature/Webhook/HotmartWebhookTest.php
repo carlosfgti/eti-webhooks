@@ -145,12 +145,13 @@ class HotmartWebhookTest extends TestCase
     public function test_user_exists_and_status_dispute()
     {
         $course = Course::factory()->create();
+        $user = User::factory()->create();
 
         $response = $this->postJson($this->endpoint, [
             'hottok' => config('hotmart.hottok'),
             "prod" => $course->identificador_hotmart,
-            "name" => "Carlos Teste",
-            "email" => "carlos@teste.com",
+            "name" => $user->name,
+            "email" => $user->email,
             "payment_type" => "hotmart",
             "status" => "dispute"
         ]);
