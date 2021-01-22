@@ -114,11 +114,6 @@ class HotmartController extends Controller
 
         if ($status == 'chargeback') {
             $user->notify(new UserChargeback($course));
-            $user->delete();
-        }
-
-        if ($status == 'chargeback') {
-            $user->notify(new UserChargeback($course));
         } else if ($status == 'dispute') {
             $user->notify(new UserDisputeEnrollment($course));
         }
