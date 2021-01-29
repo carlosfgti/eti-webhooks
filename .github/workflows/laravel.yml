@@ -39,12 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     name: CD
     needs: laravel-tests
-    #if: github.ref == 'refs/heads/master'
+    #if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: '0'
-          ref: 'master'
+          ref: 'main'
       - name: Deploy to Server
         uses: easingthemes/ssh-deploy@v2.1.5
         env:
