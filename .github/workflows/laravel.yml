@@ -1,4 +1,4 @@
-name: CI
+name: CI and CD
 
 on:
   push:
@@ -33,3 +33,31 @@ jobs:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
       run: vendor/bin/phpunit
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: CD
+    needs: laravel-tests
+    #if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+          ref: 'master'
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USERNAME }}
+          ARGS: -rltgoDzvO --exclude .git --exclude .github
+          TARGET: /home/deployer/projects/eti-webhooks/
+      - name: Executing remote ssh commands using ssh
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: docker exec -t --user=laradock laradock_workspace_1 ./deploy-webhook.sh
